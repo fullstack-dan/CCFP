@@ -32,30 +32,44 @@ function ReplyMessage({ message }) {
 }
 
 export default function ChatWindow() {
-    //array of message objects with info about the sender
+    //array of message objects with info about the sender and the message
     const [messages, setMessages] = useState([
         {
-            message: "Hello! Who are you?",
-            type: "user",
-        },
-        {
             message:
-                "Hi! I'm the Feline Learning Interface for Computer Science (FeLICS)",
+                "Hello there! I  am the Feline Learning Interface for Computer Science, or FeLICS for short. I can answer questions you might have about Western Carolina University's Computer Science program. How can I help you today?",
             type: "reply",
         },
     ]);
 
-    const sendMessage = () => {
+    const sendMessage = async () => {
         const message = document.querySelector("#user-input").value;
         const messageObject = {
             message,
             type: "user",
         };
-        const replyObject = {
-            message:
-                "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-            type: "reply",
-        };
+
+        let replyObject;
+
+        try {
+            const res = await fetch("http://localhost:5000/api/dialogflow", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text: message }),
+            });
+            const data = await res.json();
+            replyObject = {
+                message: data.reply,
+                type: "reply",
+            };
+        } catch (error) {
+            console.error("Error:", error);
+            replyObject = {
+                message:
+                    "I'm sorry, I'm having trouble understanding you right now. Please try again later.",
+                type: "reply",
+            };
+        }
+
         setMessages([...messages, messageObject, replyObject]);
         document.querySelector("#user-input").value = "";
     };
@@ -67,7 +81,7 @@ export default function ChatWindow() {
 
     return (
         <>
-            <div className="h-5/6 flex flex-col rounded-lg w-3/6">
+            <div className="h-5/6 flex flex-col w-3/6">
                 <div
                     className="flex flex-col mt-auto overflow-x-scroll"
                     id="chat-window"
