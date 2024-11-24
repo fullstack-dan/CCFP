@@ -48,33 +48,86 @@ app.post("/api/dialogflow", async (req, res) => {
         // Detect intent
         const responses = await sessionClient.detectIntent(request);
         const result = responses[0].queryResult;
-        console.log("Detected intent:", result.intent.displayName);
+        const intentName = result.intent.displayName;
 
-        if (result.intent.displayName === "GetCourseDetails") {
-            // Assuming user asked for course details
-            console.log("results:", result.parameters.fields.courseName);
-            const courseName = result.parameters.fields.courseName.stringValue;
+        console.log("Detected intent:", intentName);
 
-            // Query the database for course details
-            const query =
-                "SELECT * FROM Courses WHERE LOWER(course_name) = LOWER($1)";
-            const queryResult = await pool.query(query, [courseName]);
+        // Extract course name if present
+        const courseName = result.parameters.fields.courseName?.stringValue;
 
-            console.log("Query result:", queryResult.rows);
+        // Handle different intents
+        let responseText = "I'm not sure how to help with that.";
 
-            if (queryResult.rows.length > 0) {
-                const course = queryResult.rows[0];
-                const responseText = `Course: ${course.course_name}\nCredits: ${course.credits}\nDescription: ${course.description}`;
-                res.send({ reply: responseText });
-            } else {
-                res.send({
-                    reply: "Sorry, I could not find details for that course.",
-                });
-            }
-        } else {
-            // Default fallback response
-            res.send({ reply: result.fulfillmentText });
+        switch (intentName) {
+            case "GetCourseDetails":
+                if (courseName) {
+                    const query =
+                        "SELECT * FROM Courses WHERE course_name ILIKE $1";
+                    const queryResult = await pool.query(query, [courseName]);
+
+                    if (queryResult.rows.length > 0) {
+                        const course = queryResult.rows[0];
+                        responseText = `${course.course_name} (${course.course_id}) is a ${course.credits}-credit hour course. ${course.description}`;
+                    } else {
+                        responseText =
+                            "Sorry, I could not find details for that course. Check your spelling and try again!";
+                    }
+                } else {
+                    responseText =
+                        "Please specify the course you want details about.";
+                }
+                break;
+
+                // case "GetCourseCredits":
+                //     if (courseName) {
+                //         const query =
+                //             "SELECT credits FROM Courses WHERE course_name ILIKE $1";
+                //         const queryResult = await pool.query(query, [courseName]);
+
+                //         if (queryResult.rows.length > 0) {
+                //             const course = queryResult.rows[0];
+                //             responseText = `${courseName} is worth ${course.credits} credit hours.`;
+                //         } else {
+                //             responseText =
+                //                 "Sorry, I couldn't find the credit hours for that course.";
+                //         }
+                //     } else {
+                //         responseText =
+                //             "Please specify the course you want to know the credit hours for.";
+                //     }
+                //     break;
+
+                // case "GetCoursePrerequisites":
+                if (courseName) {
+                    const query =
+                        "SELECT prerequisites FROM Courses WHERE course_name ILIKE $1";
+                    const queryResult = await pool.query(query, [courseName]);
+
+                    if (queryResult.rows.length > 0) {
+                        const course = queryResult.rows[0];
+                        const prerequisites =
+                            course.prerequisites?.join(", ") || "None";
+                        responseText = `${courseName} has the following prerequisites: ${prerequisites}.`;
+                    } else {
+                        responseText =
+                            "Sorry, I couldn't find the prerequisites for that course.";
+                    }
+                } else {
+                    responseText =
+                        "Please specify the course you want to know the prerequisites for.";
+                }
+                break;
+
+            default:
+                // Default fallback for unhandled intents
+                responseText =
+                    result.fulfillmentText ||
+                    "I couldn't understand that. Please try again.";
+                break;
         }
+
+        // Send the response back to the user
+        res.send({ reply: responseText });
     } catch (error) {
         console.error("Error processing request:", error);
         res.status(500).send("Error processing request");

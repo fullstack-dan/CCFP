@@ -43,6 +43,7 @@ export default function ChatWindow() {
 
     const sendMessage = async () => {
         const message = document.querySelector("#user-input").value;
+        document.querySelector("#user-input").value = "";
         const messageObject = {
             message,
             type: "user",
@@ -75,8 +76,6 @@ export default function ChatWindow() {
 
         // Add the bot's reply when it arrives
         setMessages((prevMessages) => [...prevMessages, replyObject]);
-
-        document.querySelector("#user-input").value = "";
     };
 
     useEffect(() => {
