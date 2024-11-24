@@ -48,6 +48,9 @@ export default function ChatWindow() {
             type: "user",
         };
 
+        // Add user's message immediately
+        setMessages((prevMessages) => [...prevMessages, messageObject]);
+
         let replyObject;
 
         try {
@@ -70,7 +73,9 @@ export default function ChatWindow() {
             };
         }
 
-        setMessages([...messages, messageObject, replyObject]);
+        // Add the bot's reply when it arrives
+        setMessages((prevMessages) => [...prevMessages, replyObject]);
+
         document.querySelector("#user-input").value = "";
     };
 
@@ -78,6 +83,12 @@ export default function ChatWindow() {
         const chatWindow = document.querySelector("#chat-window");
         chatWindow.scrollTop = chatWindow.scrollHeight;
     }, [messages]);
+
+    const handleKeyPress = (event) => {
+        if (event.key === "Enter") {
+            sendMessage();
+        }
+    };
 
     return (
         <>
@@ -110,6 +121,7 @@ export default function ChatWindow() {
                         type="text"
                         placeholder="Type here"
                         className="input input-bordered w-full max-w-full"
+                        onKeyPress={handleKeyPress}
                     />
                     <button className="btn btn-ghost" onClick={sendMessage}>
                         <SendIcon />

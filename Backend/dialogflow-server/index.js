@@ -54,11 +54,12 @@ app.post("/api/dialogflow", async (req, res) => {
             // Assuming user asked for course details
             console.log("results:", result.parameters.fields.courseName);
             const courseName = result.parameters.fields.courseName.stringValue;
-            console.log("Course name:", courseName);
 
             // Query the database for course details
-            const query = "SELECT * FROM Courses WHERE course_name = $1";
+            const query =
+                "SELECT * FROM Courses WHERE LOWER(course_name) = LOWER($1)";
             const queryResult = await pool.query(query, [courseName]);
+
             console.log("Query result:", queryResult.rows);
 
             if (queryResult.rows.length > 0) {
