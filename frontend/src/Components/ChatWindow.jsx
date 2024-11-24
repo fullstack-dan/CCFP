@@ -6,9 +6,9 @@ function UserMessage({ message }) {
         <div className="chat chat-end">
             <div
                 className="chat-bubble"
-                style={{
-                    maxWidth: "70%",
-                }}
+                // style={{
+                //     maxWidth: "70%",
+                // }}
             >
                 {message}
             </div>
@@ -21,9 +21,9 @@ function ReplyMessage({ message }) {
         <div className="chat chat-start">
             <div
                 className="chat-bubble"
-                style={{
-                    maxWidth: "70%",
-                }}
+                // style={{
+                //     maxWidth: "70%",
+                // }}
             >
                 {message}
             </div>
@@ -91,9 +91,9 @@ export default function ChatWindow() {
 
     return (
         <>
-            <div className="h-5/6 flex flex-col w-3/6">
+            <div className="h-5/6 flex flex-col max-w-3xl px-8">
                 <div
-                    className="flex flex-col mt-auto overflow-x-scroll"
+                    className="flex flex-col mt-auto overflow-x-scroll gap-2"
                     id="chat-window"
                 >
                     {messages.map((messageObject, index) => {
