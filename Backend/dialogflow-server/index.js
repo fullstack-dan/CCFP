@@ -78,26 +78,26 @@ app.post("/api/dialogflow", async (req, res) => {
                 }
                 break;
 
-                // case "GetCourseCredits":
-                //     if (courseName) {
-                //         const query =
-                //             "SELECT credits FROM Courses WHERE course_name ILIKE $1";
-                //         const queryResult = await pool.query(query, [courseName]);
+            case "GetCourseCredits":
+                if (courseName) {
+                    const query =
+                        "SELECT credits FROM Courses WHERE course_name ILIKE $1";
+                    const queryResult = await pool.query(query, [courseName]);
 
-                //         if (queryResult.rows.length > 0) {
-                //             const course = queryResult.rows[0];
-                //             responseText = `${courseName} is worth ${course.credits} credit hours.`;
-                //         } else {
-                //             responseText =
-                //                 "Sorry, I couldn't find the credit hours for that course.";
-                //         }
-                //     } else {
-                //         responseText =
-                //             "Please specify the course you want to know the credit hours for.";
-                //     }
-                //     break;
+                    if (queryResult.rows.length > 0) {
+                        const course = queryResult.rows[0];
+                        responseText = `${courseName} is worth ${course.credits} credit hours.`;
+                    } else {
+                        responseText =
+                            "Sorry, I couldn't find the credit hours for that course.";
+                    }
+                } else {
+                    responseText =
+                        "Please specify the course you want to know the credit hours for.";
+                }
+                break;
 
-                // case "GetCoursePrerequisites":
+            case "GetPrerequsiteInfo":
                 if (courseName) {
                     const query =
                         "SELECT prerequisites FROM Courses WHERE course_name ILIKE $1";
@@ -115,6 +115,52 @@ app.post("/api/dialogflow", async (req, res) => {
                 } else {
                     responseText =
                         "Please specify the course you want to know the prerequisites for.";
+                }
+                break;
+
+            case "GetCorequsiteInfo":
+                if (courseName) {
+                    const query =
+                        "SELECT corequisites FROM Courses WHERE course_name ILIKE $1";
+                    const queryResult = await pool.query(query, [courseName]);
+
+                    if (queryResult.rows.length > 0) {
+                        const course = queryResult.rows[0];
+                        const corequisites =
+                            course.corequisites?.join(", ") || "None";
+                        responseText = `${courseName} has the following corequisites: ${corequisites}.`;
+                    } else {
+                        responseText =
+                            "Sorry, I couldn't find the corequisites for that course.";
+                    }
+                } else {
+                    responseText =
+                        "Please specify the course you want to know the corequisites for.";
+                }
+                break;
+
+            case "GetIsRequired":
+                if (courseName) {
+                    const query =
+                        "SELECT is_required FROM Courses WHERE course_name ILIKE $1";
+                    const queryResult = await pool.query(query, [courseName]);
+    
+                    if (queryResult.rows.length > 0) {
+                        const course = queryResult.rows[0];
+
+                        if (course.is_required) {
+                            responseText = `${courseName} is required.`;
+                        }
+                        else {
+                            responseText = `${courseName} is optional.`;
+                        }
+                    } else {
+                        responseText =
+                            `Sorry, I couldn't find if ${courseName} is required.`;
+                    }
+                } else {
+                    responseText =
+                        "Please specify the course you want to know that if it is required.";
                 }
                 break;
 
