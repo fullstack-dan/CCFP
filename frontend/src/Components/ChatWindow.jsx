@@ -4,28 +4,38 @@ import { useEffect, useState } from "react";
 function UserMessage({ message }) {
     return (
         <div className="chat chat-end">
-            <div
-                className="chat-bubble"
-                // style={{
-                //     maxWidth: "70%",
-                // }}
-            >
-                {message}
-            </div>
+            <div className="chat-bubble fade-up">{message}</div>
         </div>
     );
 }
 
 function ReplyMessage({ message }) {
+    const [content, setContent] = useState("");
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setContent((prevContent) => {
+                if (prevContent.length === message.length) {
+                    clearInterval(interval);
+                    return prevContent;
+                }
+                return message.slice(0, prevContent.length + 1);
+            });
+        }, 10);
+        return () => clearInterval(interval);
+    }, [message]);
+
     return (
         <div className="chat chat-start">
-            <div
-                className="chat-bubble"
-                // style={{
-                //     maxWidth: "70%",
-                // }}
-            >
-                {message}
+            <div className="chat-bubble fade-up">{content}</div>
+        </div>
+    );
+}
+
+function LoadingMessage() {
+    return (
+        <div className="chat chat-start fade-up">
+            <div className="chat-bubble">
+                <div class="dot-flashing"></div>
             </div>
         </div>
     );
@@ -40,6 +50,7 @@ export default function ChatWindow() {
             type: "reply",
         },
     ]);
+    const [pendingReply, setPendingReply] = useState(false);
 
     const sendMessage = async () => {
         const message = document.querySelector("#user-input").value;
@@ -51,6 +62,7 @@ export default function ChatWindow() {
 
         // Add user's message immediately
         setMessages((prevMessages) => [...prevMessages, messageObject]);
+        setPendingReply(true);
 
         let replyObject;
 
@@ -76,6 +88,7 @@ export default function ChatWindow() {
 
         // Add the bot's reply when it arrives
         setMessages((prevMessages) => [...prevMessages, replyObject]);
+        setPendingReply(false);
     };
 
     useEffect(() => {
@@ -91,7 +104,7 @@ export default function ChatWindow() {
 
     return (
         <>
-            <div className="h-5/6 flex flex-col max-w-3xl px-8">
+            <div className="h-5/6 flex flex-col max-w-3xl px-8 w-full">
                 <div
                     className="flex flex-col mt-auto overflow-x-scroll gap-2"
                     id="chat-window"
@@ -113,6 +126,7 @@ export default function ChatWindow() {
                             );
                         }
                     })}
+                    {pendingReply && <LoadingMessage />}
                 </div>
                 <div className="flex w-full gap-4 mt-8">
                     <input

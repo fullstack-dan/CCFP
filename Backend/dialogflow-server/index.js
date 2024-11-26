@@ -61,9 +61,18 @@ app.post("/api/dialogflow", async (req, res) => {
         switch (intentName) {
             case "GetCourseDetails":
                 if (courseName) {
-                    const query =
-                        "SELECT * FROM Courses WHERE course_name ILIKE $1";
-                    const queryResult = await pool.query(query, [courseName]);
+                    let queryResult;
+                    if (courseName.match(/\d{3}$/)) {
+                        //remove space from course name
+                        const courseID = courseName.replace(/\s/g, "");
+                        const query =
+                            "SELECT * FROM Courses WHERE course_id ILIKE $1";
+                        queryResult = await pool.query(query, [courseID]);
+                    } else {
+                        const query =
+                            "SELECT * FROM Courses WHERE course_name ILIKE $1";
+                        queryResult = await pool.query(query, [courseName]);
+                    }
 
                     if (queryResult.rows.length > 0) {
                         const course = queryResult.rows[0];
@@ -144,19 +153,17 @@ app.post("/api/dialogflow", async (req, res) => {
                     const query =
                         "SELECT is_required FROM Courses WHERE course_name ILIKE $1";
                     const queryResult = await pool.query(query, [courseName]);
-    
+
                     if (queryResult.rows.length > 0) {
                         const course = queryResult.rows[0];
 
                         if (course.is_required) {
                             responseText = `${courseName} is required.`;
-                        }
-                        else {
+                        } else {
                             responseText = `${courseName} is optional.`;
                         }
                     } else {
-                        responseText =
-                            `Sorry, I couldn't find if ${courseName} is required.`;
+                        responseText = `Sorry, I couldn't find if ${courseName} is required.`;
                     }
                 } else {
                     responseText =
