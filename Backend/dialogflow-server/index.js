@@ -171,6 +171,58 @@ app.post("/api/dialogflow", async (req, res) => {
                 }
                 break;
 
+            case "ProgressionInfo":
+                const semester = result.parameters.fields.semester?.stringValue;
+                const year = result.parameters.fields.year?.stringValue;
+
+                if (semester && year) {
+
+                    semesterNumber = 0;
+
+                    // Turn year into semester number
+                    switch (year) {
+                        case "freshman":
+                            semesterNumber += 1;
+                            break;
+                        case "sophmore":
+                            semesterNumber += 3;
+                            break;
+                        case "junior":
+                            semesterNumber += 5;
+                            break;
+                        case "senior":
+                            semesterNumber += 7;
+                    }
+                    // Turn semester into semester number
+                    switch(semester) {
+                        case "fall":
+                            break;
+                        case "spring":
+                            semesterNumber++;
+                            break;
+                    }
+
+                    const query =
+                        "SELECT semesternumber FROM semesterclasses WHERE semesternumber ILIKE $1";
+                    const queryResult = await pool.query(query, [semesterNumber]);
+    
+                    if (queryResult.rows.length > 0) {
+                        const semesterResult = queryResult.rows[0];
+                        const courses =
+                            semesterResult.classes?.join(", ") || "None";
+                        responseText = `For semester ${semesterNumber}, you should take: ${courses}.`;
+                    } else {
+                        // needs a better response
+                        responseText =
+                            `Sorry, I couldn't find any info for the classes you should take in your
+                            ${semesterNumber} semester`;
+                    }
+                } else {
+                    responseText =
+                        "Please specify the semester you want to inquire about the classes for.";
+                }
+                break;
+
             default:
                 // Default fallback for unhandled intents
                 responseText =
