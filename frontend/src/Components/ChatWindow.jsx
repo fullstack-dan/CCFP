@@ -10,6 +10,7 @@ function UserMessage({ message }) {
 }
 
 function ReplyMessage({ message }) {
+    console.log(message);
     const [content, setContent] = useState("");
     useEffect(() => {
         const interval = setInterval(() => {
@@ -35,7 +36,7 @@ function LoadingMessage() {
     return (
         <div className="chat chat-start fade-up">
             <div className="chat-bubble">
-                <div class="dot-flashing"></div>
+                <div className="dot-flashing"></div>
             </div>
         </div>
     );

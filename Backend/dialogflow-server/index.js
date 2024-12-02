@@ -4,6 +4,7 @@ const cors = require("cors");
 const { SessionsClient } = require("@google-cloud/dialogflow");
 const uuid = require("uuid");
 const { Pool } = require("pg");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const env = require("dotenv").config();
 
 const app = express();
@@ -25,6 +26,24 @@ const pool = new Pool({
     port: 5432,
 });
 
+// Configure Generative AI
+const genAI = new GoogleGenerativeAI("AIzaSyCxBhgFRFTLM07hfse4I6cDQLbUOmaVXrk");
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+// Helper function to use Gemini for response refinement
+async function generateGeminiResponse(userInput, serverResponse) {
+    const prompt = `This is the user's prompt: "${userInput}". This is the databsase's response: "${serverResponse}". Using what the server said, generate a response to our user that gives them a clear understanding and a thorough response to their initial question. If the server did not provide a reply or gave an invalid request message, you may simply reply with an apologetic message about not understanding what the user is asking and saying we can't answer that question. Keep your response limited to 200-300 words.`;
+
+    try {
+        const result = await model.generateContent([prompt]);
+        console.log("Gemini response:", result.response.text());
+        return result.response.text();
+    } catch (error) {
+        console.error("Error generating response with Gemini:", error);
+        return "I'm sorry, but I couldn't process your request at the moment.";
+    }
+}
+
 // Webhook route
 app.post("/api/dialogflow", async (req, res) => {
     const { text } = req.body;
@@ -43,6 +62,8 @@ app.post("/api/dialogflow", async (req, res) => {
             },
         },
     };
+
+    const userText = text;
 
     try {
         // Detect intent
@@ -76,7 +97,11 @@ app.post("/api/dialogflow", async (req, res) => {
 
                     if (queryResult.rows.length > 0) {
                         const course = queryResult.rows[0];
-                        responseText = `${course.course_name} (${course.course_id}) is a ${course.credits}-credit hour course. ${course.description}`;
+                        // responseText = `${course.course_name} (${course.course_id}) is a ${course.credits}-credit hour course. ${course.description}`;
+                        responseText = await generateGeminiResponse(
+                            userText,
+                            `${course.course_name} (${course.course_id}) is a ${course.credits}-credit hour course. ${course.description}`
+                        );
                     } else {
                         responseText =
                             "Sorry, I could not find details for that course. Check your spelling and try again!";
@@ -176,7 +201,6 @@ app.post("/api/dialogflow", async (req, res) => {
                 const year = result.parameters.fields.year?.stringValue;
 
                 if (semester && year) {
-
                     semesterNumber = 0;
 
                     // Turn year into semester number
@@ -194,7 +218,7 @@ app.post("/api/dialogflow", async (req, res) => {
                             semesterNumber += 7;
                     }
                     // Turn semester into semester number
-                    switch(semester) {
+                    switch (semester) {
                         case "fall":
                             break;
                         case "spring":
@@ -204,8 +228,10 @@ app.post("/api/dialogflow", async (req, res) => {
 
                     const query =
                         "SELECT semesternumber FROM semesterclasses WHERE semesternumber ILIKE $1";
-                    const queryResult = await pool.query(query, [semesterNumber]);
-    
+                    const queryResult = await pool.query(query, [
+                        semesterNumber,
+                    ]);
+
                     if (queryResult.rows.length > 0) {
                         const semesterResult = queryResult.rows[0];
                         const courses =
@@ -213,8 +239,7 @@ app.post("/api/dialogflow", async (req, res) => {
                         responseText = `For semester ${semesterNumber}, you should take: ${courses}.`;
                     } else {
                         // needs a better response
-                        responseText =
-                            `Sorry, I couldn't find any info for the classes you should take in your
+                        responseText = `Sorry, I couldn't find any info for the classes you should take in your
                             ${semesterNumber} semester`;
                     }
                 } else {
