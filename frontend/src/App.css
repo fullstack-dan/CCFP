@@ -62,3 +62,20 @@
 .fade-up {
     animation: fade-up 0.3s ease;
 }
+
+#chat-window-cont {
+    position: relative;
+    z-index: 1;
+}
+
+.catgpt-logo {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 0;
+    opacity: 0.1;
+    pointer-events: none;
+    width: 20rem;
+    height: 20rem;
+}
