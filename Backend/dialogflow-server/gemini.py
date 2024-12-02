@@ -6,13 +6,12 @@ genai.configure(api_key='API KEY GOES HERE')
 # set gemini model
 model = genai.GenerativeModel("gemini-1.5-flash")
 
-# Functions
-###################################################################################################
-
-def talk_to_gemini(user_input, server_response):
+def use_AI(user_input, server_response):
     ''' 
         This function takes the user input and passes it to gemini using a
         specially engineered prmopt and returns something in natural language 
+
+        returns: The result from gemini
     '''
     response = model.generate_content("Our user said: \"" + user_input + "\" \
 and Our database responded with this: \"" + server_response + "\" using what \
