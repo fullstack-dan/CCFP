@@ -2,7 +2,7 @@ from google.cloud import language_v2
 import google.generativeai as genai
 
 # API key setup
-genai.configure(api_key='API KEY GOES HERE')
+genai.configure(api_key='AIzaSyCxBhgFRFTLM07hfse4I6cDQLbUOmaVXrk')
 # set gemini model
 model = genai.GenerativeModel("gemini-1.5-flash")
 
