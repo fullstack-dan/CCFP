@@ -10,7 +10,6 @@ function UserMessage({ message }) {
 }
 
 function ReplyMessage({ message }) {
-    console.log(message);
     const [content, setContent] = useState("");
     useEffect(() => {
         const interval = setInterval(() => {
@@ -21,6 +20,8 @@ function ReplyMessage({ message }) {
                 }
                 return message.slice(0, prevContent.length + 1);
             });
+            const chatWindow = document.querySelector("#chat-window");
+            chatWindow.scrollTop = chatWindow.scrollHeight;
         }, 10);
         return () => clearInterval(interval);
     }, [message]);
@@ -90,7 +91,7 @@ export default function ChatWindow() {
         let replyObject;
 
         try {
-            const res = await fetch("http://localhost:5000/api/dialogflow", {
+            const res = await fetch("http://192.168.0.21:5000/api/dialogflow", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ text: message }),
@@ -114,11 +115,6 @@ export default function ChatWindow() {
         setPendingReply(false);
     };
 
-    useEffect(() => {
-        const chatWindow = document.querySelector("#chat-window");
-        chatWindow.scrollTop = chatWindow.scrollHeight;
-    }, [messages]);
-
     const handleKeyPress = (event) => {
         if (event.key === "Enter") {
             sendMessage();
@@ -128,7 +124,7 @@ export default function ChatWindow() {
     return (
         <>
             <div
-                className="h-5/6 flex flex-col max-w-3xl px-8 w-full"
+                className="h-5/6 flex flex-col max-w-3xl px-4 w-full"
                 id="chat-window-cont"
             >
                 <div
@@ -159,7 +155,7 @@ export default function ChatWindow() {
                         id="user-input"
                         type="text"
                         placeholder="Type here"
-                        className="input input-bordered w-full max-w-full"
+                        className="input input-bordered w-full"
                         onKeyPress={handleKeyPress}
                     />
                     <button className="btn btn-ghost" onClick={sendMessage}>

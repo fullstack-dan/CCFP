@@ -1,50 +1,11 @@
 const express = require("express");
-const bodyParser = require("body-parser");
-const cors = require("cors");
-const { SessionsClient } = require("@google-cloud/dialogflow");
-const uuid = require("uuid");
-const { Pool } = require("pg");
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-const env = require("dotenv").config();
+const { projectId, sessionId, sessionClient } = require("../config/dialogflow");
+const pool = require("../config/db");
+const genCourseDetails = require("../utils/genCourseDetails");
 
-const app = express();
-app.use(bodyParser.json());
-app.use(cors());
+const router = express.Router();
 
-const projectId = "ccfp-442213";
-const sessionId = uuid.v4();
-
-const sessionClient = new SessionsClient({
-    keyFilename: "./secrets/ccfp-442213-4728de656a6d.json",
-});
-
-const pool = new Pool({
-    user: process.env.POSTGRE_DB_USER,
-    host: process.env.POSTGRE_DB_HOST,
-    database: "cscoursecatalog",
-    password: process.env.POSTGRE_DB_PASSWORD,
-    port: 5432,
-});
-
-// Configure Generative AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-async function genCourseDetails(userInput, serverResponse) {
-    const prompt = `You are an academic advisor at Western Carolina University. You specialize in the computer science degree. You have access to a database that gives you information about the courses offered at the university.
-    This is the user's prompt: "${userInput}". This is the server's response: "${serverResponse}". Using only the server's response as a reference, answer the user's prompt. Do not format your text; act as if you were a human responding to the user. Be thorough.`;
-
-    try {
-        const result = await model.generateContent([prompt]);
-        return result.response.text();
-    } catch (error) {
-        console.error("Error generating response with Gemini:", error);
-        return "I'm sorry, but I couldn't process your request at the moment.";
-    }
-}
-
-// Webhook route
-app.post("/api/dialogflow", async (req, res) => {
+router.post("/", async (req, res) => {
     const { text } = req.body;
 
     const sessionPath = sessionClient.projectAgentSessionPath(
@@ -65,17 +26,14 @@ app.post("/api/dialogflow", async (req, res) => {
     const userText = text;
 
     try {
-        // Detect intent
         const responses = await sessionClient.detectIntent(request);
         const result = responses[0].queryResult;
         const intentName = result.intent.displayName;
 
         console.log("Detected intent:", intentName);
 
-        // Extract course name if present
         const courseName = result.parameters.fields.courseName?.stringValue;
 
-        // Handle different intents
         let responseText = "I'm not sure how to help with that.";
 
         switch (intentName) {
@@ -96,7 +54,7 @@ app.post("/api/dialogflow", async (req, res) => {
 
                     if (queryResult.rows.length > 0) {
                         const course = queryResult.rows[0];
-                        const databaseResponse = `Course name: ${course.course_name}; Course ID: ${course.course_id}; Credits: ${course.credits}; Description: ${course.description}`;
+                        const databaseResponse = `Course name: ${course.course_name}; Course ID: ${course.course_id}; Credits: ${course.credits}; Description: ${course.description}; Typical Availability: ${course.availability}; Is Required: ${course.is_required};`;
 
                         responseText = await genCourseDetails(
                             userText,
@@ -133,14 +91,39 @@ app.post("/api/dialogflow", async (req, res) => {
 
             case "GetPrerequsiteInfo":
                 if (courseName) {
-                    const query =
-                        "SELECT prerequisites FROM Courses WHERE course_name ILIKE $1";
-                    const queryResult = await pool.query(query, [courseName]);
+                    let queryResult;
+
+                    if (courseName.match(/\d{3}$/)) {
+                        //remove space from course name
+                        const courseID = courseName.replace(/\s/g, "");
+                        const query = `
+                            SELECT c.course_name 
+                            FROM Courses AS c
+                            WHERE c.course_id = ANY (
+                                SELECT UNNEST(prerequisites) 
+                                FROM Courses 
+                                WHERE course_id ILIKE $1
+                            );
+                        `;
+                        queryResult = await pool.query(query, [courseID]);
+                    } else {
+                        const query = `
+                            SELECT c.course_name 
+                            FROM Courses AS c
+                            WHERE c.course_id = ANY (
+                                SELECT UNNEST(prerequisites) 
+                                FROM Courses 
+                                WHERE course_name ILIKE $1
+                            );
+                    `;
+                        queryResult = await pool.query(query, [courseName]);
+                    }
 
                     if (queryResult.rows.length > 0) {
-                        const course = queryResult.rows[0];
-                        const databaseResponse =
-                            course.prerequisites?.join(", ") || "None";
+                        const course = queryResult.rows;
+                        const databaseResponse = course
+                            .map((c) => c.course_name)
+                            .join(", ");
 
                         responseText = await genCourseDetails(
                             userText,
@@ -156,25 +139,49 @@ app.post("/api/dialogflow", async (req, res) => {
                 }
                 break;
 
-            case "GetCorequsiteInfo":
+            case "GetCorequsitesInfo":
                 if (courseName) {
-                    const query =
-                        "SELECT corequisites FROM Courses WHERE course_name ILIKE $1";
-                    const queryResult = await pool.query(query, [courseName]);
+                    let queryResult;
 
+                    if (courseName.match(/\d{3}$/)) {
+                        const courseID = courseName.replace(/\s/g, "");
+                        const query = `
+                            SELECT c.course_name 
+                            FROM Courses AS c
+                            WHERE c.course_id = ANY (
+                                SELECT UNNEST(corequisites) 
+                                FROM Courses 
+                                WHERE course_id ILIKE $1
+                            );
+                        `;
+                        queryResult = await pool.query(query, [courseID]);
+                    } else {
+                        const query = `
+                            SELECT c.course_name 
+                            FROM Courses AS cs
+                            WHERE c.course_id = ANY (
+                                SELECT UNNEST(corequisites) 
+                                FROM Courses 
+                                WHERE course_name ILIKE $1
+                            );
+                        `;
+                        queryResult = await pool.query(query, [courseName]);
+                    }
+
+                    console.log(queryResult);
                     if (queryResult.rows.length > 0) {
-                        const course = queryResult.rows[0];
-                        const databaseResponse =
-                            course.corequisites?.join(", ") || "None";
+                        const course = queryResult.rows;
+                        const databaseResponse = course
+                            .map((c) => c.course_name)
+                            .join(", ");
 
                         responseText = await genCourseDetails(
                             userText,
                             `${courseName} has the following corequisites: ${databaseResponse}.`
                         );
-                    } else {
-                        responseText =
-                            "Sorry, I couldn't find the corequisites for that course.";
                     }
+
+                    responseText = `Sorry, I couldn't find the corequisites for that course.`;
                 } else {
                     responseText =
                         "Please specify the course you want to know the corequisites for.";
@@ -183,9 +190,24 @@ app.post("/api/dialogflow", async (req, res) => {
 
             case "GetIsRequired":
                 if (courseName) {
-                    const query =
-                        "SELECT is_required FROM Courses WHERE course_name ILIKE $1";
-                    const queryResult = await pool.query(query, [courseName]);
+                    let queryResult;
+
+                    if (courseName.match(/\d{3}$/)) {
+                        const courseID = courseName.replace(/\s/g, "");
+                        const query = `
+                            SELECT is_required
+                            FROM Courses
+                            WHERE course_id ILIKE $1;
+                        `;
+                        queryResult = await pool.query(query, [courseID]);
+                    } else {
+                        const query = `
+                            SELECT is_required
+                            FROM Courses
+                            WHERE course_name ILIKE $1;
+                        `;
+                        queryResult = await pool.query(query, [courseName]);
+                    }
 
                     if (queryResult.rows.length > 0) {
                         const course = queryResult.rows[0];
@@ -201,6 +223,43 @@ app.post("/api/dialogflow", async (req, res) => {
                 } else {
                     responseText =
                         "Please specify the course you want to know that if it is required.";
+                }
+                break;
+
+            case "GetCourseAvailability":
+                if (courseName) {
+                    let queryResult;
+
+                    if (courseName.match(/\d{3}$/)) {
+                        const courseID = courseName.replace(/\s/g, "");
+                        const query = `
+                            SELECT availability
+                            FROM Courses
+                            WHERE course_id ILIKE $1;
+                        `;
+                        queryResult = await pool.query(query, [courseID]);
+                    } else {
+                        const query = `
+                            SELECT availability
+                            FROM Courses
+                            WHERE course_name ILIKE $1;
+                        `;
+                        queryResult = await pool.query(query, [courseName]);
+                    }
+
+                    if (queryResult.rows.length > 0) {
+                        const course = queryResult.rows[0];
+                        databaseResponse = course.availability;
+                        responseText = await genCourseDetails(
+                            userText,
+                            `${courseName} is typically available in ${databaseResponse}.`
+                        );
+                    } else {
+                        responseText = `Sorry, I couldn't find the typical availability for ${courseName}.`;
+                    }
+                } else {
+                    responseText =
+                        "Please specify the course you want to know the typical availability for.";
                 }
                 break;
 
@@ -264,7 +323,6 @@ app.post("/api/dialogflow", async (req, res) => {
                 break;
         }
 
-        // Send the response back to the user
         res.send({ reply: responseText });
     } catch (error) {
         console.error("Error processing request:", error);
@@ -272,6 +330,4 @@ app.post("/api/dialogflow", async (req, res) => {
     }
 });
 
-app.listen(5000, () => {
-    console.log("Server running on port 5000");
-});
+module.exports = router;

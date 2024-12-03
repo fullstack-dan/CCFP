@@ -79,3 +79,10 @@
     width: 20rem;
     height: 20rem;
 }
+
+body,
+html {
+    height: 100dvh;
+    display: flex;
+    justify-content: center;
+}
