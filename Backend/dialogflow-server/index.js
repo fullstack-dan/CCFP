@@ -32,7 +32,14 @@ const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 // Helper function to use Gemini for response refinement
 async function generateGeminiResponse(userInput, serverResponse) {
-    const prompt = `This is the user's prompt: "${userInput}". This is the databsase's response: "${serverResponse}". Using what the server said, generate a response to our user that gives them a clear understanding and a thorough response to their initial question. If the server did not provide a reply or gave an invalid request message, you may simply reply with an apologetic message about not understanding what the user is asking and saying we can't answer that question. Keep your response limited to 200-300 words.`;
+    const prompt = `This is the user's prompt: "${userInput}". This is the \
+    database's response: "${serverResponse}". Using what the server said, \
+    generate a response to our user that gives them a clear understanding and \
+    a thorough response to their initial question. If the server did not \
+    provide a reply or gave an invalid request message, you may simply reply \
+    with an apologetic message about not understanding what the user is asking \
+    and saying we can't answer that question. Keep your response limited to \
+    200-300 words.`;
 
     try {
         const result = await model.generateContent([prompt]);
