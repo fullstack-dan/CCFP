@@ -66,6 +66,10 @@ const SvgIcon = () => (
 );
 
 export default function ChatWindow() {
+    const apiAddress =
+        window.location.hostname === "localhost"
+            ? "http://localhost:5000"
+            : "https://ccfp.onrender.com";
     //array of message objects with info about the sender and the message
     const [messages, setMessages] = useState([
         {
@@ -91,14 +95,11 @@ export default function ChatWindow() {
         let replyObject;
 
         try {
-            const res = await fetch(
-                "https://ccfp.onrender.com/api/dialogflow",
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ text: message }),
-                }
-            );
+            const res = await fetch(`${apiAddress}/api/dialogflow`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text: message }),
+            });
             const data = await res.json();
             replyObject = {
                 message: data.reply,

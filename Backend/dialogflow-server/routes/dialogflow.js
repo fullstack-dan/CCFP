@@ -1,7 +1,11 @@
 const express = require("express");
 const { projectId, sessionId, sessionClient } = require("../config/dialogflow");
 const pool = require("../config/db");
-const genCourseDetails = require("../utils/genCourseDetails");
+const {
+    genCourseDetails,
+    genCourseDifficulty,
+    genCoursePairing,
+} = require("../utils/genCourseDetails");
 
 const router = express.Router();
 
@@ -99,7 +103,7 @@ router.post("/", async (req, res) => {
                         //remove space from course name
                         const courseID = courseName.replace(/\s/g, "");
                         const query = `
-                            SELECT c.course_name 
+                            SELECT c.course_name, c.course_id 
                             FROM Courses AS c
                             WHERE c.course_id = ANY (
                                 SELECT UNNEST(prerequisites) 
@@ -110,7 +114,7 @@ router.post("/", async (req, res) => {
                         queryResult = await pool.query(query, [courseID]);
                     } else {
                         const query = `
-                            SELECT c.course_name 
+                            SELECT c.course_name, c.course_id
                             FROM Courses AS c
                             WHERE c.course_id = ANY (
                                 SELECT UNNEST(prerequisites) 
@@ -121,34 +125,31 @@ router.post("/", async (req, res) => {
                         queryResult = await pool.query(query, [courseName]);
                     }
 
-                    if (queryResult.rows.length > 0) {
-                        const course = queryResult.rows;
-                        const databaseResponse = course
-                            .map((c) => c.course_name)
-                            .join(", ");
+                    const course = queryResult.rows;
+                    const databaseResponse = course
+                        .map((c) => {
+                            return `${c.course_name} (${c.course_id})`;
+                        })
+                        .join(", ");
 
-                        responseText = await genCourseDetails(
-                            userText,
-                            `${courseName} has the following prerequisites: ${databaseResponse}.`
-                        );
-                    } else {
-                        responseText =
-                            "Sorry, I couldn't find the prerequisites for that course.";
-                    }
+                    responseText = await genCourseDetails(
+                        userText,
+                        `${courseName} has the following prerequisites: ${databaseResponse}.`
+                    );
                 } else {
                     responseText =
                         "Please specify the course you want to know the prerequisites for.";
                 }
                 break;
 
-            case "GetCorequsitesInfo":
+            case "GetCorequisitesInfo":
                 if (courseName) {
                     let queryResult;
 
                     if (courseName.match(/\d{3}$/)) {
                         const courseID = courseName.replace(/\s/g, "");
                         const query = `
-                            SELECT c.course_name 
+                            SELECT c.course_name, c.course_id
                             FROM Courses AS c
                             WHERE c.course_id = ANY (
                                 SELECT UNNEST(corequisites) 
@@ -159,7 +160,7 @@ router.post("/", async (req, res) => {
                         queryResult = await pool.query(query, [courseID]);
                     } else {
                         const query = `
-                            SELECT c.course_name 
+                            SELECT c.course_name, c.course_id
                             FROM Courses AS cs
                             WHERE c.course_id = ANY (
                                 SELECT UNNEST(corequisites) 
@@ -171,19 +172,17 @@ router.post("/", async (req, res) => {
                     }
 
                     console.log(queryResult);
-                    if (queryResult.rows.length > 0) {
-                        const course = queryResult.rows;
-                        const databaseResponse = course
-                            .map((c) => c.course_name)
-                            .join(", ");
+                    const course = queryResult.rows;
+                    const databaseResponse = course
+                        .map((c) => {
+                            return `${c.course_name} (${c.course_id})`;
+                        })
+                        .join(", ");
 
-                        responseText = await genCourseDetails(
-                            userText,
-                            `${courseName} has the following corequisites: ${databaseResponse}.`
-                        );
-                    }
-
-                    responseText = `Sorry, I couldn't find the corequisites for that course.`;
+                    responseText = await genCourseDetails(
+                        userText,
+                        `${courseName} has the following corequisites: ${databaseResponse}.`
+                    );
                 } else {
                     responseText =
                         "Please specify the course you want to know the corequisites for.";
@@ -352,7 +351,7 @@ router.post("/", async (req, res) => {
                         const course = queryResult.rows[0];
                         const workloadInfo = `Course ID: ${course.course_id}; Content Difficulty: ${course.contentdifficulty}; Workload: ${course.workload}; Assignment Difficulty: ${course.assignmentdifficulty};`;
 
-                        responseText = await genCourseDetails(
+                        responseText = await genCourseDifficulty(
                             userText,
                             `${workloadInfo}`
                         );
@@ -365,8 +364,7 @@ router.post("/", async (req, res) => {
                 }
                 break;
 
-            case "ClassWeighing":
-                //check if either class is a course id
+            case "ClassWeighting":
                 if (class1.match(/\d{3}$/) || class2.match(/\d{3}$/)) {
                     const query = `
                         SELECT workload.*, Courses.availability
@@ -386,9 +384,9 @@ router.post("/", async (req, res) => {
                         const workloadInfo1 = `Course ID: ${course1.course_id}; Content Difficulty: ${course1.contentdifficulty}; Workload: ${course1.workload}; Assignment Difficulty: ${course1.assignmentdifficulty}; Availability: ${course1.availability};`;
                         const workloadInfo2 = `Course ID: ${course2.course_id}; Content Difficulty: ${course2.contentdifficulty}; Workload: ${course2.workload}; Assignment Difficulty: ${course2.assignmentdifficulty}; Availability: ${course2.availability};`;
 
-                        responseText = await genCourseDetails(
+                        responseText = await genCoursePairing(
                             userText,
-                            `${workloadInfo1} ${workloadInfo2}`
+                            `Course 1: ${workloadInfo1}; Course 2: ${workloadInfo2}`
                         );
                     } else {
                         responseText = `Sorry, I couldn't find the difficulty for ${class1} and ${class2}.`;
@@ -397,7 +395,6 @@ router.post("/", async (req, res) => {
                     responseText =
                         "Please specify the course you want to know the difficulty for.";
                 }
-
                 break;
 
             default:
