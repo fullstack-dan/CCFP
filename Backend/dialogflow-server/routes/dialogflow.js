@@ -33,6 +33,8 @@ router.post("/", async (req, res) => {
         console.log("Detected intent:", intentName);
 
         const courseName = result.parameters.fields.courseName?.stringValue;
+        const class1 = result.parameters.fields.class1?.stringValue;
+        const class2 = result.parameters.fields.class2?.stringValue;
 
         let responseText = "I'm not sure how to help with that.";
 
@@ -362,6 +364,42 @@ router.post("/", async (req, res) => {
                         "Please specify the course you want to know the difficulty for.";
                 }
                 break;
+
+            case "ClassWeighing":
+                //check if either class is a course id
+                if (class1.match(/\d{3}$/) || class2.match(/\d{3}$/)) {
+                    const query = `
+                        SELECT workload.*, Courses.availability
+                        FROM workload
+                        JOIN Courses ON workload.course_id = Courses.course_id
+                        WHERE workload.course_id ILIKE $1 OR workload.course_id ILIKE $2;
+
+                    `;
+                    const queryResult = await pool.query(query, [
+                        class1,
+                        class2,
+                    ]);
+
+                    if (queryResult.rows.length > 0) {
+                        const course1 = queryResult.rows[0];
+                        const course2 = queryResult.rows[1];
+                        const workloadInfo1 = `Course ID: ${course1.course_id}; Content Difficulty: ${course1.contentdifficulty}; Workload: ${course1.workload}; Assignment Difficulty: ${course1.assignmentdifficulty}; Availability: ${course1.availability};`;
+                        const workloadInfo2 = `Course ID: ${course2.course_id}; Content Difficulty: ${course2.contentdifficulty}; Workload: ${course2.workload}; Assignment Difficulty: ${course2.assignmentdifficulty}; Availability: ${course2.availability};`;
+
+                        responseText = await genCourseDetails(
+                            userText,
+                            `${workloadInfo1} ${workloadInfo2}`
+                        );
+                    } else {
+                        responseText = `Sorry, I couldn't find the difficulty for ${class1} and ${class2}.`;
+                    }
+                } else {
+                    responseText =
+                        "Please specify the course you want to know the difficulty for.";
+                }
+
+                break;
+
             default:
                 // Default fallback for unhandled intents
                 responseText =

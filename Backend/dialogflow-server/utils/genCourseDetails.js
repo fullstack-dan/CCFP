@@ -29,7 +29,8 @@ async function genCourseDetails(userInput, serverResponse) {
     If a student asks about a course's difficulty or workload, use the following student feedback ratings to describe the course: 
     For content difficulty: A rating of 1 implies: ${difficultyScales.ContentDifficulty[1]}; a rating of 2 implies: ${difficultyScales.ContentDifficulty[2]}; a rating of 3 implies: ${difficultyScales.ContentDifficulty[3]}; a rating of 4 implies: ${difficultyScales.ContentDifficulty[4]}.
     For workload: A rating of 1 implies: ${difficultyScales.Workload[1]}; a rating of 2 implies: ${difficultyScales.Workload[2]}; a rating of 3 implies: ${difficultyScales.Workload[3]}; a rating of 4 implies: ${difficultyScales.Workload[4]}.
-    For assignment difficulty: A rating of 1 implies: ${difficultyScales.AssignmentDifficulty[1]}; a rating of 2 implies: ${difficultyScales.AssignmentDifficulty[2]}; a rating of 3 implies: ${difficultyScales.AssignmentDifficulty[3]}; a rating of 4 implies: ${difficultyScales.AssignmentDifficulty[4]}.`;
+    For assignment difficulty: A rating of 1 implies: ${difficultyScales.AssignmentDifficulty[1]}; a rating of 2 implies: ${difficultyScales.AssignmentDifficulty[2]}; a rating of 3 implies: ${difficultyScales.AssignmentDifficulty[3]}; a rating of 4 implies: ${difficultyScales.AssignmentDifficulty[4]}.
+    If a student asks about the possibility of taking two courses at the same time, first take note of each course's availability. If the courses are both available in the same semester, consider the difficulty of each course based on the student feedback ratings and provide a response with your suggestion.`;
 
     try {
         const result = await model.generateContent([prompt]);
