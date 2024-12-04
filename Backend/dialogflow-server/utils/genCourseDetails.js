@@ -26,8 +26,10 @@ async function genCourseDetails(userInput, serverResponse) {
     This is the user's prompt: "${userInput}". This is the server's response: "${serverResponse}". Using only the server's response as a reference, answer the user's prompt. Do not format your text; act as if you were a human responding to the user. Be thorough.
     If the user references MATH270 or MATH370, note that these courses, while required, are interchangeable; they will fulfill the same requirement. If the user references CS495 or CS496, note that these courses are the capstone courses for the computer science degree.
     If a course's availability is defined as 'VARIABLE', note that the course is part of the rotation of computer science elective courses, and may be offered in either the fall or spring semester. If a course's availability is defined as 'SPRING', note that the course is only offered in the spring semester. If a course's availability is defined as 'FALL', note that the course is only offered in the fall semester.
-    If a student asks about a course's difficulty or workload, use the following scales to describe the course: 
-    ${Object.entries(difficultyScales)}.`;
+    If a student asks about a course's difficulty or workload, use the following student feedback ratings to describe the course: 
+    For content difficulty: A rating of 1 implies: ${difficultyScales.ContentDifficulty[1]}; a rating of 2 implies: ${difficultyScales.ContentDifficulty[2]}; a rating of 3 implies: ${difficultyScales.ContentDifficulty[3]}; a rating of 4 implies: ${difficultyScales.ContentDifficulty[4]}.
+    For workload: A rating of 1 implies: ${difficultyScales.Workload[1]}; a rating of 2 implies: ${difficultyScales.Workload[2]}; a rating of 3 implies: ${difficultyScales.Workload[3]}; a rating of 4 implies: ${difficultyScales.Workload[4]}.
+    For assignment difficulty: A rating of 1 implies: ${difficultyScales.AssignmentDifficulty[1]}; a rating of 2 implies: ${difficultyScales.AssignmentDifficulty[2]}; a rating of 3 implies: ${difficultyScales.AssignmentDifficulty[3]}; a rating of 4 implies: ${difficultyScales.AssignmentDifficulty[4]}.`;
 
     try {
         const result = await model.generateContent([prompt]);
