@@ -262,8 +262,6 @@ router.post("/", async (req, res) => {
                         "Please specify the course you want to know the typical availability for.";
                 }
                 break;
-
-            case "ProgressionInfo":
                 const semester = result.parameters.fields.semester?.stringValue;
                 const year = result.parameters.fields.year?.stringValue;
 
@@ -315,6 +313,55 @@ router.post("/", async (req, res) => {
                 }
                 break;
 
+            case "GetCourseDifficulty":
+                if (courseName) {
+                    let queryResult;
+
+                    if (courseName.match(/\d{3}$/)) {
+                        const courseID = courseName.replace(/\s/g, "");
+                        const query = `
+                            SELECT *
+                            FROM workload
+                            WHERE course_id ILIKE $1;
+                        `;
+                        queryResult = await pool.query(query, [courseID]);
+                    } else {
+                        const query1 = `
+                            SELECT course_id
+                            FROM Courses
+                            WHERE course_name ILIKE $1;
+                        `;
+                        queryResult = await pool.query(query1, [courseName]);
+
+                        if (queryResult.rows.length > 0) {
+                            const courseID = queryResult.rows[0].course_id;
+                            const query2 = `
+                                SELECT *
+                                FROM workload
+                                WHERE course_id ILIKE $1;
+                            `;
+                            queryResult = await pool.query(query2, [courseID]);
+                        } else {
+                            queryResult = { rows: [] };
+                        }
+                    }
+
+                    if (queryResult.rows.length > 0) {
+                        const course = queryResult.rows[0];
+                        const workloadInfo = `Course ID: ${course.course_id}; Content Difficulty: ${course.contentdifficulty}; Workload: ${course.workload}; Assignment Difficulty: ${course.assignmentdifficulty};`;
+
+                        responseText = await genCourseDetails(
+                            userText,
+                            `${workloadInfo}`
+                        );
+                    } else {
+                        responseText = `Sorry, I couldn't find the difficulty for ${courseName}.`;
+                    }
+                } else {
+                    responseText =
+                        "Please specify the course you want to know the difficulty for.";
+                }
+                break;
             default:
                 // Default fallback for unhandled intents
                 responseText =
