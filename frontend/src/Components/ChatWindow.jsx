@@ -91,11 +91,14 @@ export default function ChatWindow() {
         let replyObject;
 
         try {
-            const res = await fetch("http://192.168.0.21:5000/api/dialogflow", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: message }),
-            });
+            const res = await fetch(
+                "https://ccfp.onrender.com/api/dialogflow",
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text: message }),
+                }
+            );
             const data = await res.json();
             replyObject = {
                 message: data.reply,
